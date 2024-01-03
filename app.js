@@ -40,33 +40,39 @@ const formatDateAndSendToReqObj = (req, res, next) => {
 };
 
 const filterBasedOnQueryParams = (req, res, next) => {
-  const { status, priority, search_q, category } = req.query;
+  const {
+    status = "",
+    priority = "",
+    search_q = "",
+    category = "",
+  } = req.query;
   // console.log(req.query);
-  if (status !== undefined) {
-    const statusPredefinedArr = ["TO DO", "IN PROGRESS", "DONE"];
-    const gotStatus = returnWithRemoved20(status);
-    if (statusPredefinedArr.includes(gotStatus)) {
-      req.status = gotStatus;
-    }
+
+  const statusPredefinedArr = ["TO DO", "IN PROGRESS", "DONE"];
+  const gotStatus = returnWithRemoved20(status);
+  console.log(gotStatus);
+  if (statusPredefinedArr.includes(gotStatus)) {
+    req.status = gotStatus;
+  } else {
+    req.status = status;
   }
 
-  if (priority !== undefined) {
-    const priorityPredefinedArr = ["HIGH", "MEDIUM", "LOW"];
-    if (priorityPredefinedArr.includes(priority)) {
-      req.priority = priority;
-    }
+  const priorityPredefinedArr = ["HIGH", "MEDIUM", "LOW"];
+  if (priorityPredefinedArr.includes(priority)) {
+    req.priority = priority;
+  } else {
+    req.priority = priority;
   }
 
-  if (search_q !== undefined) {
-    req.search_q = search_q;
+  req.search_q = search_q;
+
+  const categoryPredefinedArr = ["HOME", "WORK", "LEARNING"];
+  if (categoryPredefinedArr.includes(category)) {
+    req.category = category;
+  } else {
+    req.category = category;
   }
 
-  if (category !== undefined) {
-    const categoryPredefinedArr = ["HOME", "WORK", "LEARNING"];
-    if (categoryPredefinedArr.includes(category)) {
-      req.category = category;
-    }
-  }
   next();
 };
 
@@ -94,47 +100,53 @@ const getQueryBasedOnBodyForPut = (req, res, next) => {
   next();
 };
 
-app.get("/todos/", filterBasedOnQueryParams, (req, res) => {
-  console.log({
-    category: req.category,
-    status: req.status,
-    priority: req.priority,
-    search_q: req.search_q,
-  });
-  res.status(200).send({
-    category: req.category,
-    status: req.status,
-    priority: req.priority,
-    search_q: req.search_q,
-  });
+app.get("/todos/", filterBasedOnQueryParams, async (req, res) => {
+  const { priority, status, search_q, category } = req;
+  console.log({ priority, status, search_q, category });
+  const gettingTodoBasedOnQueryParamsQuery = `SELECT * FROM TODO 
+  WHERE priority LIKE '%${priority}%' AND status LIKE '%${status}%' AND todo LIKE '%${search_q}%' AND 
+  category LIKE '%${category}%' ;`;
+  console.log(gettingTodoBasedOnQueryParamsQuery);
+  const allToDosList = await db.all(gettingTodoBasedOnQueryParamsQuery);
+  console.log(allToDosList);
+  res.send(allToDosList);
 });
 
 // path to get agenda based on given date
 
-app.get("/agenda/", formatDateAndSendToReqObj, (req, res) => {
+app.get("/agenda/", formatDateAndSendToReqObj, async (req, res) => {
   const { date } = req;
-  res.send({ date: date });
+  const gettingDataBasedOnDateQuery = `SELECT id , todo  , priority , status , category , due_date as dueDate FROM TODO WHERE due_date = '${date}' `;
+  console.log(gettingDataBasedOnDateQuery);
+  const todoBasedOnDate = await db.get(gettingDataBasedOnDateQuery);
+  res.send(todoBasedOnDate);
 });
 
 // path for getting todo based on todo id
-app.get("/todos/:id", (req, res) => {
+app.get("/todos/:id/", async (req, res) => {
   const { id } = req.params;
   const gettingTodoBasedOnIdQuery = `SELECT * FROM todo WHERE id = ${id}`;
+  const todoList = await db.all(gettingTodoBasedOnIdQuery);
+  res.send(todoList);
 });
 
 // creating a todo and posting
 
-app.post("/todos/", (req, res) => {
+app.post("/todos/", async (req, res) => {
   const { id, todo, priority, status, category, dueDate } = req.body;
-  const addingTodoQuery = `INSERT INTO TODO(id , todo , priority , status , category , dueDate) VALUES
+  const addingTodoQuery = `INSERT INTO TODO(id , todo , priority , status , category , due_date) VALUES
      (${id} , '${todo}' , '${priority}' , '${status}' , '${category}' , '${dueDate}')`;
 
-  // complete running sql query using run method
+  const responseAfterAdding = await db.run(addingTodoQuery);
+  console.log(responseAfterAdding);
+  res.send("Todo Successfully Added");
 });
+
+// till now API's are completed ################# --->>> sign for continuation
 
 app.put("/todos/:id", getQueryBasedOnBodyForPut, (req, res) => {
   const updateQuery = req.updateQuery;
-  // updating using run method
+  // updating using run methods
 });
 
 // path for deleting todo
