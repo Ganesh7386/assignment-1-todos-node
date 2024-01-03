@@ -70,6 +70,30 @@ const filterBasedOnQueryParams = (req, res, next) => {
   next();
 };
 
+const getQueryBasedOnBodyForPut = (req, res, next) => {
+  const { priority, category, dueDate, todo, status } = req.body;
+  let querySql = null;
+  switch (true) {
+    case priority !== undefined:
+      querySql = `UPDATE TODO SET priority='${priority}'`;
+      break;
+    case category !== undefined:
+      querySql = `UPDATE TODO SET category='${category}' `;
+      break;
+    case dueDate !== undefined:
+      querySql = `UPDATE TODO SET date ='${date}' `;
+      break;
+    case todo !== undefined:
+      querySql = `UPDATE TODO SET todo ='${todo}' `;
+      break;
+    case status !== undefined:
+      querySql = `UPDATE TODO SET status = '${status}' `;
+  }
+  console.log(`Query sql is ${querySql}`);
+  req.updateQuery = querySql;
+  next();
+};
+
 app.get("/todos/", filterBasedOnQueryParams, (req, res) => {
   console.log({
     category: req.category,
@@ -90,4 +114,33 @@ app.get("/todos/", filterBasedOnQueryParams, (req, res) => {
 app.get("/agenda/", formatDateAndSendToReqObj, (req, res) => {
   const { date } = req;
   res.send({ date: date });
+});
+
+// path for getting todo based on todo id
+app.get("/todos/:id", (req, res) => {
+  const { id } = req.params;
+  const gettingTodoBasedOnIdQuery = `SELECT * FROM todo WHERE id = ${id}`;
+});
+
+// creating a todo and posting
+
+app.post("/todos/", (req, res) => {
+  const { id, todo, priority, status, category, dueDate } = req.body;
+  const addingTodoQuery = `INSERT INTO TODO(id , todo , priority , status , category , dueDate) VALUES
+     (${id} , '${todo}' , '${priority}' , '${status}' , '${category}' , '${dueDate}')`;
+
+  // complete running sql query using run method
+});
+
+app.put("/todos/:id", getQueryBasedOnBodyForPut, (req, res) => {
+  const updateQuery = req.updateQuery;
+  // updating using run method
+});
+
+// path for deleting todo
+
+app.delete("/todos/:id/", (req, res) => {
+  const { id } = req.params;
+  const deletingTodoQuery = `DELETE FROM TODO WHERE id = ${id} `;
+  // deleting todo using run method
 });

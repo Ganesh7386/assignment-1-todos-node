@@ -1,0 +1,6 @@
+put http://localhost:3000/todos/10/
+
+Content-Type:  'application/json'
+{
+    "priority" : "HIGH"
+}
