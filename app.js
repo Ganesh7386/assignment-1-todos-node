@@ -40,40 +40,64 @@ const formatDateAndSendToReqObj = (req, res, next) => {
 };
 
 const filterBasedOnQueryParams = (req, res, next) => {
-  const {
-    status = "",
-    priority = "",
-    search_q = "",
-    category = "",
-  } = req.query;
-  // console.log(req.query);
+  const { status, priority, search_q, category } = req.query;
+  console.log("at middleware");
+  console.log(req.query);
+  let isErrorOccured = false;
 
-  const statusPredefinedArr = ["TO DO", "IN PROGRESS", "DONE"];
-  const gotStatus = returnWithRemoved20(status);
-  console.log(gotStatus);
-  if (statusPredefinedArr.includes(gotStatus)) {
-    req.status = gotStatus;
+  if (status !== undefined) {
+    const statusPredefinedArr = ["TO DO", "IN PROGRESS", "DONE"];
+    const gotStatus = returnWithRemoved20(status);
+    console.log(gotStatus);
+    if (statusPredefinedArr.includes(gotStatus)) {
+      req.status = gotStatus;
+    } else {
+      // req.status = "";
+      isErrorOccured = true;
+      res.status(400).send("Invalid Todo Status");
+    }
   } else {
-    req.status = status;
+    req.status = "";
+    console.log("status is empty");
   }
 
-  const priorityPredefinedArr = ["HIGH", "MEDIUM", "LOW"];
-  if (priorityPredefinedArr.includes(priority)) {
-    req.priority = priority;
+  if (priority !== undefined) {
+    const priorityPredefinedArr = ["HIGH", "MEDIUM", "LOW"];
+    if (priorityPredefinedArr.includes(priority)) {
+      req.priority = priority;
+    } else {
+      req.priority = "";
+      isErrorOccured = true;
+      res.status(400).send("Invalid Todo Priority");
+    }
   } else {
-    req.priority = priority;
+    req.priority = "";
+    console.log("priority is empty");
   }
 
-  req.search_q = search_q;
-
-  const categoryPredefinedArr = ["HOME", "WORK", "LEARNING"];
-  if (categoryPredefinedArr.includes(category)) {
-    req.category = category;
+  if (search_q !== undefined) {
+    req.search_q = search_q;
   } else {
-    req.category = category;
+    req.search_q = "";
+    console.log("search_q is empty");
   }
 
-  next();
+  if (category !== undefined) {
+    const categoryPredefinedArr = ["HOME", "WORK", "LEARNING"];
+    if (categoryPredefinedArr.includes(category)) {
+      req.category = category;
+    } else {
+      req.category = "";
+      isErrorOccured = true;
+      res.status(400).send("Invalid Todo Category");
+    }
+  } else {
+    req.category = "";
+    console.log("category is empty");
+  }
+  if (!isErrorOccured) {
+    next();
+  }
 };
 
 const getQueryBasedOnBodyForPut = (req, res, next) => {
@@ -144,15 +168,20 @@ app.post("/todos/", async (req, res) => {
 
 // till now API's are completed ################# --->>> sign for continuation
 
-app.put("/todos/:id", getQueryBasedOnBodyForPut, (req, res) => {
+app.put("/todos/:id", getQueryBasedOnBodyForPut, async (req, res) => {
   const updateQuery = req.updateQuery;
   // updating using run methods
+  const updatingTodoPromise = await db.run(updateQuery);
+  res.send("Todo updated successfully");
 });
 
 // path for deleting todo
 
-app.delete("/todos/:id/", (req, res) => {
+app.delete("/todos/:id/", async (req, res) => {
   const { id } = req.params;
   const deletingTodoQuery = `DELETE FROM TODO WHERE id = ${id} `;
   // deleting todo using run method
+  const deletingTodoPromise = await db.run(deletingTodoQuery);
+  console.log(deletingTodoPromise);
+  res.send("Todo Successfully deleted");
 });
