@@ -157,9 +157,9 @@ app.get("/todos/:id/", async (req, res) => {
 // creating a todo and posting
 
 app.post("/todos/", async (req, res) => {
-  const { id, todo, priority, status, category, dueDate } = req.body;
+  const { id, todo, priority, status, category, due_date } = req.body;
   const addingTodoQuery = `INSERT INTO TODO(id , todo , priority , status , category , due_date) VALUES
-     (${id} , '${todo}' , '${priority}' , '${status}' , '${category}' , '${dueDate}')`;
+     (${id} , '${todo}' , '${priority}' , '${status}' , '${category}' , '${due_date}'  )`;
 
   const responseAfterAdding = await db.run(addingTodoQuery);
   console.log(responseAfterAdding);
