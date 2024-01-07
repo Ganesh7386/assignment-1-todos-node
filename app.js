@@ -46,7 +46,7 @@ const formatDateAndSendToReqObj = (req, res, next) => {
     next();
   } catch (e) {
     console.log(e.message);
-    res.status(404).send("Invalid Due Date");
+    res.status(400).send("Invalid Due Date");
   }
 };
 
@@ -142,9 +142,13 @@ app.get("/todos/", filterBasedOnQueryParams, async (req, res) => {
   WHERE priority LIKE '%${priority}%' AND status LIKE '%${status}%' AND todo LIKE '%${search_q}%' AND 
   category LIKE '%${category}%' ;`;
   console.log(gettingTodoBasedOnQueryParamsQuery);
-  const allToDosList = await db.all(gettingTodoBasedOnQueryParamsQuery);
-  console.log(allToDosList);
-  res.send(allToDosList);
+  try {
+    const allToDosList = await db.get(gettingTodoBasedOnQueryParamsQuery);
+    console.log(allToDosList);
+    res.send(allToDosList);
+  } catch (e) {
+    console.log(e.message);
+  }
 });
 
 // path to get agenda based on given date
@@ -153,16 +157,24 @@ app.get("/agenda/", formatDateAndSendToReqObj, async (req, res) => {
   const { date } = req;
   const gettingDataBasedOnDateQuery = `SELECT id , todo  , priority , status , category , due_date as dueDate FROM TODO WHERE due_date = '${date}' `;
   console.log(gettingDataBasedOnDateQuery);
-  const todoBasedOnDate = await db.get(gettingDataBasedOnDateQuery);
-  res.send(todoBasedOnDate);
+  try {
+    const todoBasedOnDate = await db.all(gettingDataBasedOnDateQuery);
+    res.send(todoBasedOnDate);
+  } catch (e) {
+    console.log(e.message);
+  }
 });
 
 // path for getting todo based on todo id
 app.get("/todos/:id/", async (req, res) => {
   const { id } = req.params;
   const gettingTodoBasedOnIdQuery = `SELECT * FROM todo WHERE id = ${id}`;
-  const todoList = await db.all(gettingTodoBasedOnIdQuery);
-  res.send(todoList);
+  try {
+    const todoList = await db.get(gettingTodoBasedOnIdQuery);
+    res.send(todoList);
+  } catch (e) {
+    console.log(e.message);
+  }
 });
 
 // creating a todo and posting
@@ -185,8 +197,12 @@ app.post("/todos/", async (req, res) => {
 app.put("/todos/:id", getQueryBasedOnBodyForPut, async (req, res) => {
   const updateQuery = req.updateQuery;
   // updating using run methods
-  const updatingTodoPromise = await db.run(updateQuery);
-  res.send("Todo updated successfully");
+  try {
+    const updatingTodoPromise = await db.run(updateQuery);
+    res.send("Todo updated successfully");
+  } catch (e) {
+    console.log(e.message);
+  }
 });
 
 // path for deleting todo
@@ -195,9 +211,14 @@ app.delete("/todos/:id/", async (req, res) => {
   const { id } = req.params;
   const deletingTodoQuery = `DELETE FROM TODO WHERE id = ${id} `;
   // deleting todo using run method
-  const deletingTodoPromise = await db.run(deletingTodoQuery);
-  console.log(deletingTodoPromise);
-  res.send("Todo Successfully deleted");
+
+  try {
+    const deletingTodoPromise = await db.run(deletingTodoQuery);
+    console.log(deletingTodoPromise);
+    res.send("Todo Successfully deleted");
+  } catch (e) {
+    console.log(e.message);
+  }
 });
 
 module.exports = app;
