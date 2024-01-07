@@ -31,12 +31,23 @@ const returnWithRemoved20 = (word) => {
 };
 
 const formatDateAndSendToReqObj = (req, res, next) => {
-  const { date } = req.query;
-  console.log(`send date is ${date}`);
-  const formattedDate = format(new Date(date), "yyyy-MM-dd");
-  console.log(formattedDate);
-  req.date = formattedDate;
-  next();
+  try {
+    const { date } = req.query;
+    console.log(`send date is ${date}`);
+    const reqDate = new Date(date);
+    // const gotDate = reqDate.getDate();
+    // const gotMonth = reqDate.getMonth();
+    // console.log(`Month is ${gotMonth}`);
+    // const gotYear = reqDate.getFullYear();
+
+    const formattedDate = format(new Date(date), "yyyy-MM-dd");
+    console.log(formattedDate);
+    req.date = formattedDate;
+    next();
+  } catch (e) {
+    console.log(e.message);
+    res.status(404).send("Invalid Due Date");
+  }
 };
 
 const filterBasedOnQueryParams = (req, res, next) => {
@@ -160,10 +171,13 @@ app.post("/todos/", async (req, res) => {
   const { id, todo, priority, status, category, due_date } = req.body;
   const addingTodoQuery = `INSERT INTO TODO(id , todo , priority , status , category , due_date) VALUES
      (${id} , '${todo}' , '${priority}' , '${status}' , '${category}' , '${due_date}'  )`;
-
-  const responseAfterAdding = await db.run(addingTodoQuery);
-  console.log(responseAfterAdding);
-  res.send("Todo Successfully Added");
+  try {
+    const responseAfterAdding = await db.run(addingTodoQuery);
+    console.log(responseAfterAdding);
+    res.send("Todo Successfully Added");
+  } catch (e) {
+    console.log(e.message);
+  }
 });
 
 // till now API's are completed ################# --->>> sign for continuation
@@ -185,3 +199,5 @@ app.delete("/todos/:id/", async (req, res) => {
   console.log(deletingTodoPromise);
   res.send("Todo Successfully deleted");
 });
+
+module.exports = app;
