@@ -229,8 +229,9 @@ app.post("/todos/", verifyValuesInTodoPost, async (req, res) => {
   const addingTodoQuery = `INSERT INTO TODO(id , todo , priority , status , category , due_date) VALUES
      (${id} , '${todo}' , '${priority}' , '${status}' , '${category}' , '${due_date}'  )`;
   try {
+    console.log("before run");
     await db.run(addingTodoQuery);
-    //console.log(responseAfterAdding);
+    console.log("responseAfterAdding");
     res.send("Todo Successfully Added");
   } catch (e) {
     console.log(e.message);
@@ -244,7 +245,9 @@ app.put("/todos/:id", getQueryBasedOnBodyForPutRequest, async (req, res) => {
   // updating using run methods
   try {
     await db.run(updateQuery);
+    console.log("run is over");
     res.send("Todo updated successfully");
+    console.log("response sent");
   } catch (e) {
     console.log(e.message);
   }
