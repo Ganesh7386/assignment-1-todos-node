@@ -31,6 +31,115 @@ const returnWithRemoved20 = (word) => {
   return joinedWord;
 };
 
+// (((((((((((  <<<<<<<<-----------   for getting todos based on different query parameters
+const filteringBasedOnQueryParams = (req, res, next) => {
+  const {
+    status = "",
+    priority = "",
+    search_q = "",
+    category = "",
+  } = req.query;
+  console.log({ status, priority, search_q, category });
+
+  let errMsg = "";
+  let anyErr = false;
+
+  let queryFlags = [
+    {
+      status1: false,
+      stmt: "",
+    },
+    {
+      priority1: false,
+      stmt: "",
+    },
+    {
+      category1: false,
+      stmt: "",
+    },
+  ];
+  //console.log(queryFlags);
+  //console.log({ status, priority, category, search_q });
+  if (status !== "") {
+    const statusPredefinedArr = ["TO DO", "IN PROGRESS", "DONE"];
+    const gotStatus = returnWithRemoved20(status);
+    queryFlags[0] = { status1: true, stmt: `AND status = "${status}" ` };
+    if (!statusPredefinedArr.includes(status)) {
+      errMsg = "Invalid Todo Status";
+      anyErr = true;
+      //queryFlags.status = false;
+      console.log("status error");
+    }
+  }
+
+  if (category !== "") {
+    const categoryPredefinedArr = ["HOME", "WORK", "LEARNING"];
+    queryFlags[2] = { category1: true, stmt: `AND category = "${category}" ` };
+    if (!categoryPredefinedArr.includes(category)) {
+      errMsg = "Invalid Todo Category";
+      anyErr = true;
+      console.log("category error");
+    }
+  }
+
+  if (priority !== "") {
+    const priorityPredefinedArr = ["HIGH", "MEDIUM", "LOW"];
+    queryFlags[1] = { priority1: true, stmt: `AND priority = "${priority}" ` };
+    if (!priorityPredefinedArr.includes(priority)) {
+      errMsg = "Invalid Todo Priority";
+      anyErr = true;
+      console.log("priority error");
+    }
+  }
+  //let sqlQuery = `SELECT * FROM TODO WHERE todo LIKE "%${search_q}%" and status LIKE "%${status}%" and priority LIKE "%${priority}%" and  category LIKE "%${category}%";`;
+  let sqlQuery = `SELECT * FROM TODO WHERE todo LIKE "%${search_q}%" `;
+  let queryList = [];
+  // forming sql query from queryFlags
+  console.log(queryFlags);
+
+  switch (true) {
+    case queryFlags[0].status1:
+      queryList.push(`${queryFlags[0].stmt}`);
+    case queryFlags[1].priority1:
+      queryList.push(`${queryFlags[1].stmt}`);
+    case queryFlags[2].category1:
+      queryList.push(`${queryFlags[2].stmt}`);
+  }
+
+  console.log(queryList);
+  const joinedQueries = queryList.join(" ");
+  console.log(`Joined query is ${joinedQueries}`);
+  // console.log(queryList);
+  sqlQuery = `${sqlQuery} ${joinedQueries}`;
+  console.log(`Final sql query is ${sqlQuery}`);
+  if (anyErr) {
+    res.status(400).send(errMsg);
+    console.log("error occured");
+  } else {
+    // console.log(queryFlags);
+    req.sqlQuery = sqlQuery;
+    console.log("Went to next handler");
+    next();
+    //const selectionQuery = designQueryBasedOnBoolean(queryFlags);
+  }
+};
+
+app.get("/todos/", filteringBasedOnQueryParams, async (req, res) => {
+  const { sqlQuery } = req;
+  console.log(sqlQuery);
+  try {
+    const allToDosList = await db.all(sqlQuery);
+    console.log(allToDosList);
+    console.log("reached to end");
+    res.send(allToDosList);
+  } catch (e) {
+    console.log(e.message);
+  }
+});
+//  ---------->>>> Completed API-1   <<<<<<<<<<<<----------------------     <<<<<<<<<<<>>>>>>>>>>>>>  ))))))))))))))
+
+// (((((((((((    API-2 <<<<<<<<--------- Starting  ------------------->>>>>>>
+
 const formatDateAndSendToReqObj = (req, res, next) => {
   try {
     const { date } = req.query;
@@ -51,126 +160,98 @@ const formatDateAndSendToReqObj = (req, res, next) => {
   }
 };
 
-const filteringBasedOnQueryParams = (req, res, next) => {
-  const {
-    status = "",
-    priority = "",
-    search_q = "",
-    category = "",
-  } = req.query;
-  console.log({ status, priority, search_q, category });
+app.get("/agenda/", formatDateAndSendToReqObj, async (req, res) => {
+  const { date } = req;
+  const gettingDataBasedOnDateQuery = `SELECT id , todo  , priority , status , category , due_date as dueDate FROM TODO WHERE due_date = '${date}' `;
+  console.log(gettingDataBasedOnDateQuery);
+  try {
+    const todoBasedOnDate = await db.all(gettingDataBasedOnDateQuery);
+    res.send(todoBasedOnDate);
+  } catch (e) {
+    console.log(e.message);
+  }
+});
 
+// ---------------->>>>>> Completed API-2 <<<<<<<<---------------------->>>>>>>>---------------<<<<<>>>>>>  )))))))))))))
+
+// ((((((((((((((     <<<<<<<<<------------------- API-3 for getting todo based on id  ---------->>>>>>>
+
+// path for getting todo based on todo id
+app.get("/todos/:todoId/", async (req, res) => {
+  const { todoId } = req.params;
+  const gettingTodoBasedOnIdQuery = `SELECT * FROM todo WHERE id = ${todoId};`;
+  try {
+    const todoList = await db.get(gettingTodoBasedOnIdQuery);
+    res.send(todoList);
+    console.log(todoList);
+  } catch (e) {
+    console.log(e.message);
+  }
+});
+
+// ---------->>>>>>>  COmpleted API-3   <<<<<<<<<<<-------------------- >>>>>>>>>>>>><<<<<<<<<<<<<<<< )))))))))
+
+//((((((((((    <<<<<<<<<<<<<<<<<<<<--------- API-4 for Posting a TODO  ------------>>>>>>>>>>>>>>
+
+// creating a todo and posting
+const verifyValuesInTodoPost = (req, res, next) => {
+  const { priority, status, category, due_date } = req.body;
+  console.log({ priority, status, category, due_date });
+  let isAnyError = false;
   let errMsg = "";
-  let anyErr = false;
-  //console.log(queryFlags);
-  //console.log({ status, priority, category, search_q });
-  if (status !== "") {
-    const statusPredefinedArr = ["TO DO", "IN PROGRESS", "DONE"];
-    const gotStatus = returnWithRemoved20(status);
-    if (!statusPredefinedArr.includes(status)) {
+  const statusPredefinedArr = ["TO DO", "IN PROGRESS", "DONE"];
+  const priorityPredefinedArr = ["HIGH", "MEDIUM", "LOW"];
+  const categoryPredefinedArr = ["HOME", "WORK", "LEARNING"];
+
+  switch (true) {
+    case !statusPredefinedArr.includes(status):
+      isAnyError = true;
       errMsg = "Invalid Todo Status";
-      anyErr = true;
-      //queryFlags.status = false;
-      console.log("status error");
-    }
-  }
-
-  if (category !== "") {
-    const categoryPredefinedArr = ["HOME", "WORK", "LEARNING"];
-    if (!categoryPredefinedArr.includes(category)) {
-      errMsg = "Invalid Todo Category";
-      anyErr = true;
-      console.log("category error");
-    }
-  }
-
-  if (priority !== "") {
-    const priorityPredefinedArr = ["HIGH", "MEDIUM", "LOW"];
-    if (!priorityPredefinedArr.includes(priority)) {
+      console.log("error in status");
+      break;
+    case !priorityPredefinedArr.includes(priority):
+      isAnyError = true;
       errMsg = "Invalid Todo Priority";
-      anyErr = true;
-      console.log("priority error");
-    }
+      console.log("error in priority");
+      break;
+    case !categoryPredefinedArr.includes(category):
+      isAnyError = true;
+      errMsg = "Invalid Todo Category";
+      console.log("invalid category");
+      break;
+    case !isValid(new Date(`${due_date}`)):
+      isAnyError = true;
+      errMsg = "Invalid Due Date";
+      console.log("error in due_date");
+      break;
   }
-  let sqlQuery = `SELECT * FROM TODO WHERE todo LIKE "%${search_q}%" and status LIKE "%${status}%" and priority LIKE "%${priority}%" and  category LIKE "%${category}%";`;
-  console.log(sqlQuery);
-  console.log(`Error occur ${anyErr}`);
-  console.log(`Error is ${errMsg}`);
-  if (anyErr) {
+  console.log(`Any error ${isAnyError}`);
+
+  if (isAnyError) {
+    console.log(`Error is ${errMsg}`);
     res.status(400).send(errMsg);
-    console.log("error occured");
   } else {
-    // console.log(queryFlags);
-    req.sqlQuery = sqlQuery;
-    console.log("Went to next handler");
-    next();
-    //const selectionQuery = designQueryBasedOnBoolean(queryFlags);
-  }
-};
-
-//const designQueryBasedOnBoolean = (queryFlags) => {};
-
-/*const filterBasedOnQueryParams = (req, res, next) => {
-  const { status, priority, search_q, category } = req.query;
-  console.log("at middleware");
-  // console.log(req.query);
-  let isErrorOccured = false;
-
-  if (status !== undefined) {
-    const statusPredefinedArr = ["TO DO", "IN PROGRESS", "DONE"];
-    const gotStatus = returnWithRemoved20(status);
-    console.log(gotStatus);
-    if (statusPredefinedArr.includes(gotStatus)) {
-      req.status = gotStatus;
-    } else {
-      // req.status = "";
-      isErrorOccured = true;
-      res.status(400).send("Invalid Todo Status");
-    }
-  } else {
-    req.status = "";
-    console.log("status is empty");
-  }
-
-  if (priority !== undefined) {
-    const priorityPredefinedArr = ["HIGH", "MEDIUM", "LOW"];
-    if (priorityPredefinedArr.includes(priority)) {
-      req.priority = priority;
-    } else {
-      req.priority = "";
-      isErrorOccured = true;
-      res.status(400).send("Invalid Todo Priority");
-    }
-  } else {
-    req.priority = "";
-    console.log("priority is empty");
-  }
-
-  if (search_q !== undefined) {
-    req.search_q = search_q;
-  } else {
-    req.search_q = "";
-    console.log("search_q is empty");
-  }
-
-  if (category !== undefined) {
-    const categoryPredefinedArr = ["HOME", "WORK", "LEARNING"];
-    if (categoryPredefinedArr.includes(category)) {
-      req.category = category;
-    } else {
-      req.category = "";
-      isErrorOccured = true;
-      res.status(400).send("Invalid Todo Category");
-    }
-  } else {
-    req.category = "";
-    console.log("category is empty");
-  }
-  if (!isErrorOccured) {
     next();
   }
 };
-*/
+
+app.post("/todos/", verifyValuesInTodoPost, async (req, res) => {
+  const { id, todo, priority, status, category, due_date } = req.body;
+  const addingTodoQuery = `INSERT INTO TODO(id , todo , priority , status , category , due_date) VALUES
+     (${id} , '${todo}' , '${priority}' , '${status}' , '${category}' , '${due_date}'  ) ;`;
+  try {
+    console.log("before run");
+    const postingTodoResponse = await db.run(addingTodoQuery);
+    res.send("Todo Successfully Added");
+    console.log(postingTodoResponse);
+  } catch (e) {
+    console.log(e.message);
+  }
+});
+
+//   ------------>>>>> API-4 Completed <<<<<<<------------------------<<<<<<<<<<<<>>>>>>>>>>>>>  )))))))))))))))
+
+//(((((((((((( <<<<<<<<<<<----------- API-5 for changing a TODO parameter  --------------------->>>>>>>>>>>>>>>>>>
 
 const getQueryBasedOnBodyForPutRequest = (req, res, next) => {
   const { priority, category, dueDate, todo, status } = req.body;
@@ -241,104 +322,6 @@ const getQueryBasedOnBodyForPutRequest = (req, res, next) => {
   }
 };
 
-app.get("/todos/", filteringBasedOnQueryParams, async (req, res) => {
-  const { sqlQuery } = req;
-  console.log(sqlQuery);
-  try {
-    const allToDosList = await db.all(sqlQuery);
-    console.log(allToDosList);
-    console.log("reached to end");
-    res.send(allToDosList);
-  } catch (e) {
-    console.log(e.message);
-  }
-});
-
-// path to get agenda based on given date
-
-app.get("/agenda/", formatDateAndSendToReqObj, async (req, res) => {
-  const { date } = req;
-  const gettingDataBasedOnDateQuery = `SELECT id , todo  , priority , status , category , due_date as dueDate FROM TODO WHERE due_date = '${date}' `;
-  console.log(gettingDataBasedOnDateQuery);
-  try {
-    const todoBasedOnDate = await db.all(gettingDataBasedOnDateQuery);
-    res.send(todoBasedOnDate);
-  } catch (e) {
-    console.log(e.message);
-  }
-});
-
-// path for getting todo based on todo id
-app.get("/todos/:todoId/", async (req, res) => {
-  const { todoId } = req.params;
-  const gettingTodoBasedOnIdQuery = `SELECT * FROM todo WHERE id = ${todoId};`;
-  try {
-    const todoList = await db.get(gettingTodoBasedOnIdQuery);
-    res.send(todoList);
-    console.log(todoList);
-  } catch (e) {
-    console.log(e.message);
-  }
-});
-
-// creating a todo and posting
-const verifyValuesInTodoPost = (req, res, next) => {
-  const { priority, status, category, due_date } = req.body;
-  console.log({ priority, status, category, due_date });
-  let isAnyError = false;
-  let errMsg = "";
-  const statusPredefinedArr = ["TO DO", "IN PROGRESS", "DONE"];
-  const priorityPredefinedArr = ["HIGH", "MEDIUM", "LOW"];
-  const categoryPredefinedArr = ["HOME", "WORK", "LEARNING"];
-
-  switch (true) {
-    case !statusPredefinedArr.includes(status):
-      isAnyError = true;
-      errMsg = "Invalid Todo Status";
-      console.log("error in status");
-      break;
-    case !priorityPredefinedArr.includes(priority):
-      isAnyError = true;
-      errMsg = "Invalid Todo Priority";
-      console.log("error in priority");
-      break;
-    case !categoryPredefinedArr.includes(category):
-      isAnyError = true;
-      errMsg = "Invalid Todo Category";
-      console.log("invalid category");
-      break;
-    case !isValid(new Date(`${due_date}`)):
-      isAnyError = true;
-      errMsg = "Invalid Due Date";
-      console.log("error in due_date");
-      break;
-  }
-  console.log(`Any error ${isAnyError}`);
-
-  if (isAnyError) {
-    console.log(`Error is ${errMsg}`);
-    res.status(400).send(errMsg);
-  } else {
-    next();
-  }
-};
-
-app.post("/todos/", verifyValuesInTodoPost, async (req, res) => {
-  const { id, todo, priority, status, category, due_date } = req.body;
-  const addingTodoQuery = `INSERT INTO TODO(id , todo , priority , status , category , due_date) VALUES
-     (${id} , '${todo}' , '${priority}' , '${status}' , '${category}' , '${due_date}'  ) ;`;
-  try {
-    console.log("before run");
-    const postingTodoResponse = await db.run(addingTodoQuery);
-    res.send("Todo Successfully Added");
-    console.log(postingTodoResponse);
-  } catch (e) {
-    console.log(e.message);
-  }
-});
-
-// till now api's are completed ################# --->>> sign for continuation
-
 app.put(
   "/todos/:todoId/",
   getQueryBasedOnBodyForPutRequest,
@@ -352,7 +335,9 @@ app.put(
   }
 );
 
-// path for deleting todo
+// ---------->>>>>> API-5   Completed --------------->>>>>>>>>>>>>>    --------<<<<<<<<<<<<<<<<<<<>>>>>>> )))))))))))
+
+// ((((((((((((   <<<<<<<<<<<<<<<-------------- API-6 for Deleting a Todo based on id ----------------->>>>>>>>>>>.
 
 app.delete("/todos/:id/", async (req, res) => {
   const { id } = req.params;
@@ -367,5 +352,7 @@ app.delete("/todos/:id/", async (req, res) => {
     console.log(e.message);
   }
 });
+
+// --------------->>>>>>>>>>> API-6 Completed    ------------------>>>>>>>>>>>>>><<<<<<<<<<<<<>>>>>>>>>> ))))))))))))
 
 module.exports = app;
