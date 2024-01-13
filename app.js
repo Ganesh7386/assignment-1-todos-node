@@ -54,7 +54,7 @@ const formatDateAndSendToReqObj = (req, res, next) => {
 const filterBasedOnQueryParams = (req, res, next) => {
   const { status, priority, search_q, category } = req.query;
   console.log("at middleware");
-  console.log(req.query);
+  // console.log(req.query);
   let isErrorOccured = false;
 
   if (status !== undefined) {
@@ -129,7 +129,7 @@ const getQueryBasedOnBodyForPutRequest = (req, res, next) => {
         isAnyErr = true;
         errMsg = "Invalid Todo Priority";
       } else {
-        querySql = `UPDATE TODO SET priority='${priority} WHERE id = ${todoId}'`;
+        querySql = `UPDATE TODO SET priority='${priority}' WHERE id = ${todoId};`;
         resMsg = "Priority Updated";
       }
       break;
@@ -138,12 +138,12 @@ const getQueryBasedOnBodyForPutRequest = (req, res, next) => {
         isAnyErr = true;
         errMsg = "Invalid Todo Category";
       } else {
-        querySql = `UPDATE TODO SET category='${category}  WHERE id = ${todoId}' `;
+        querySql = `UPDATE TODO SET category='${category}'  WHERE id = ${todoId}; `;
         resMsg = "Category Updated";
       }
       break;
     case todo !== undefined:
-      querySql = `UPDATE TODO SET todo ='${todo}  WHERE id = ${todoId}' `;
+      querySql = `UPDATE TODO SET todo ='${todo}'  WHERE id = ${todoId}; `;
       resMsg = "Todo Updated";
       break;
     case status !== undefined:
@@ -151,7 +151,7 @@ const getQueryBasedOnBodyForPutRequest = (req, res, next) => {
         isAnyErr = true;
         errMsg = "Invalid Todo Status";
       } else {
-        querySql = `UPDATE TODO SET status = '${status}  WHERE id = ${todoId}' `;
+        querySql = `UPDATE TODO SET status = '${status}'  WHERE id = ${todoId}; `;
         resMsg = "Status Updated";
       }
       break;
@@ -163,7 +163,7 @@ const getQueryBasedOnBodyForPutRequest = (req, res, next) => {
         const formattedDate = format(dueDate, "yyyy-MM-dd");
         //console.log(formattedDate);
         // console.log("in try block");
-        querySql = `UPDATE TODO SET due_date=${dueDate}  WHERE id = ${todoId}`;
+        querySql = `UPDATE TODO SET due_date='${dueDate}'  WHERE id = ${todoId};`;
         resMsg = "Due Date Updated";
       } catch (e) {
         //console.log(`due date error is ${e.message}`);
@@ -286,15 +286,15 @@ app.post("/todos", verifyValuesInTodoPost, async (req, res) => {
      (${id} , '${todo}' , '${priority}' , '${status}' , '${category}' , '${due_date}'  )`;
   try {
     console.log("before run");
-    await db.run(addingTodoQuery);
-    console.log("responseAfterAdding");
+    const postingTodoResponse = await db.run(addingTodoQuery);
     res.send("Todo Successfully Added");
+    console.log(postingTodoResponse);
   } catch (e) {
     console.log(e.message);
   }
 });
 
-// till now API's are completed ################# --->>> sign for continuation
+// till now api's are completed ################# --->>> sign for continuation
 
 app.put(
   "/todos/:todoId",
