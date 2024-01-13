@@ -156,16 +156,12 @@ const getQueryBasedOnBodyForPutRequest = (req, res, next) => {
       }
       break;
     case dueDate !== undefined:
-      try {
-        // console.log(`Date from body is ${due_date}`);
-        const dueDate = new Date(dueDate);
-
-        const formattedDate = format(dueDate, "yyyy-MM-dd");
-        //console.log(formattedDate);
-        // console.log("in try block");
+      // console.log(`Date from body is ${due_date}`);
+      const dueDate = new Date(dueDate);
+      if (isValid(new Date(`${dueDate}`))) {
         querySql = `UPDATE TODO SET due_date='${dueDate}'  WHERE id = ${todoId};`;
         resMsg = "Due Date Updated";
-      } catch (e) {
+      } else {
         //console.log(`due date error is ${e.message}`);
         isAnyErr = true;
         errMsg = "Invalid Due Date";
@@ -254,20 +250,10 @@ const verifyValuesInTodoPost = (req, res, next) => {
       errMsg = "Invalid Todo Category";
       console.log("invalid category");
       break;
-    default:
-      try {
-        // console.log(`Date from body is ${due_date}`);
-        const dueDate = new Date(due_date);
-
-        const formattedDate = format(dueDate, "yyyy-MM-dd");
-        //console.log(formattedDate);
-        // console.log("in try block");
-      } catch (e) {
-        //console.log(`due date error is ${e.message}`);
-        isAnyError = true;
-        errMsg = "Invalid Due Date";
-        console.log("error in due_date");
-      }
+    case !isValid(new Date(`${due_date}`)):
+      isAnyError = true;
+      errMsg = "Invalid Due Date";
+      console.log("error in due_date");
       break;
   }
   console.log(`Any error ${isAnyError}`);
