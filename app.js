@@ -113,25 +113,32 @@ const filterBasedOnQueryParams = (req, res, next) => {
 
 const getQueryBasedOnBodyForPutRequest = (req, res, next) => {
   const { priority, category, dueDate, todo, status } = req.body;
+  let resMsg = null;
   let querySql = null;
   switch (true) {
     case priority !== undefined:
       querySql = `UPDATE TODO SET priority='${priority}'`;
+      resMsg = "Priority Updated";
       break;
     case category !== undefined:
       querySql = `UPDATE TODO SET category='${category}' `;
+      resMsg = "Category Updated";
       break;
     case dueDate !== undefined:
       querySql = `UPDATE TODO SET date ='${date}' `;
+      resMsg = "Due Date Updated";
       break;
     case todo !== undefined:
       querySql = `UPDATE TODO SET todo ='${todo}' `;
+      resMsg = "Todo Updated";
       break;
     case status !== undefined:
       querySql = `UPDATE TODO SET status = '${status}' `;
+      resMsg = "Status Updated";
   }
   console.log(`Query sql is ${querySql}`);
   req.updateQuery = querySql;
+  req.resMsg = resMsg;
   next();
 };
 
@@ -143,7 +150,7 @@ app.get("/todos/", filterBasedOnQueryParams, async (req, res) => {
   category LIKE '%${category}%' ;`;
   console.log(gettingTodoBasedOnQueryParamsQuery);
   try {
-    const allToDosList = await db.get(gettingTodoBasedOnQueryParamsQuery);
+    const allToDosList = await db.all(gettingTodoBasedOnQueryParamsQuery);
     console.log(allToDosList);
     res.send(allToDosList);
   } catch (e) {
@@ -166,9 +173,9 @@ app.get("/agenda/", formatDateAndSendToReqObj, async (req, res) => {
 });
 
 // path for getting todo based on todo id
-app.get("/todos/:id/", async (req, res) => {
-  const { id } = req.params;
-  const gettingTodoBasedOnIdQuery = `SELECT * FROM todo WHERE id = ${id}`;
+app.get("/todos/:todoId/", async (req, res) => {
+  const { todoId } = req.params;
+  const gettingTodoBasedOnIdQuery = `SELECT * FROM todo WHERE id = ${todoId}`;
   try {
     const todoList = await db.get(gettingTodoBasedOnIdQuery);
     res.send(todoList);
@@ -241,12 +248,12 @@ app.post("/todos/", verifyValuesInTodoPost, async (req, res) => {
 // till now API's are completed ################# --->>> sign for continuation
 
 app.put("/todos/:id", getQueryBasedOnBodyForPutRequest, async (req, res) => {
-  const updateQuery = req.updateQuery;
+  const { updateQuery, resMsg } = req;
   // updating using run methods
   try {
     await db.run(updateQuery);
     console.log("run is over");
-    res.send("Todo updated successfully");
+    res.send(resMsg);
     console.log("response sent");
   } catch (e) {
     console.log(e.message);
