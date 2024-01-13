@@ -51,7 +51,66 @@ const formatDateAndSendToReqObj = (req, res, next) => {
   }
 };
 
-const filterBasedOnQueryParams = (req, res, next) => {
+const filteringBasedOnQueryParams = (req, res, next) => {
+  const {
+    status = "",
+    priority = "",
+    search_q = "",
+    category = "",
+  } = req.query;
+  console.log({ status, priority, search_q, category });
+
+  let errMsg = "";
+  let anyErr = false;
+  //console.log(queryFlags);
+  //console.log({ status, priority, category, search_q });
+  if (status !== "") {
+    const statusPredefinedArr = ["TO DO", "IN PROGRESS", "DONE"];
+    const gotStatus = returnWithRemoved20(status);
+    if (!statusPredefinedArr.includes(status)) {
+      errMsg = "Invalid Todo Status";
+      anyErr = true;
+      //queryFlags.status = false;
+      console.log("status error");
+    }
+  }
+
+  if (category !== "") {
+    const categoryPredefinedArr = ["HOME", "WORK", "LEARNING"];
+    if (!categoryPredefinedArr.includes(category)) {
+      errMsg = "Invalid Todo Category";
+      anyErr = true;
+      console.log("category error");
+    }
+  }
+
+  if (priority !== "") {
+    const priorityPredefinedArr = ["HIGH", "MEDIUM", "LOW"];
+    if (!priorityPredefinedArr.includes(priority)) {
+      errMsg = "Invalid Todo Priority";
+      anyErr = true;
+      console.log("priority error");
+    }
+  }
+  let sqlQuery = `SELECT * FROM TODO WHERE todo LIKE "%${search_q}%" and status LIKE "%${status}%" and priority LIKE "%${priority}%" and  category LIKE "%${category}%";`;
+  console.log(sqlQuery);
+  console.log(`Error occur ${anyErr}`);
+  console.log(`Error is ${errMsg}`);
+  if (anyErr) {
+    res.status(400).send(errMsg);
+    console.log("error occured");
+  } else {
+    // console.log(queryFlags);
+    req.sqlQuery = sqlQuery;
+    console.log("Went to next handler");
+    next();
+    //const selectionQuery = designQueryBasedOnBoolean(queryFlags);
+  }
+};
+
+//const designQueryBasedOnBoolean = (queryFlags) => {};
+
+/*const filterBasedOnQueryParams = (req, res, next) => {
   const { status, priority, search_q, category } = req.query;
   console.log("at middleware");
   // console.log(req.query);
@@ -111,6 +170,7 @@ const filterBasedOnQueryParams = (req, res, next) => {
     next();
   }
 };
+*/
 
 const getQueryBasedOnBodyForPutRequest = (req, res, next) => {
   const { priority, category, dueDate, todo, status } = req.body;
@@ -181,16 +241,13 @@ const getQueryBasedOnBodyForPutRequest = (req, res, next) => {
   }
 };
 
-app.get("/todos/", filterBasedOnQueryParams, async (req, res) => {
-  const { priority, status, search_q, category } = req;
-  console.log({ priority, status, search_q, category });
-  const gettingTodoBasedOnQueryParamsQuery = `SELECT * FROM TODO 
-  WHERE priority LIKE '%${priority}%' AND status LIKE '%${status}%' AND todo LIKE '%${search_q}%' AND 
-  category LIKE '%${category}%' ;`;
-  console.log(gettingTodoBasedOnQueryParamsQuery);
+app.get("/todos/", filteringBasedOnQueryParams, async (req, res) => {
+  const { sqlQuery } = req;
+  console.log(sqlQuery);
   try {
-    const allToDosList = await db.all(gettingTodoBasedOnQueryParamsQuery);
+    const allToDosList = await db.all(sqlQuery);
     console.log(allToDosList);
+    console.log("reached to end");
     res.send(allToDosList);
   } catch (e) {
     console.log(e.message);
