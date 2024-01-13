@@ -157,7 +157,7 @@ const getQueryBasedOnBodyForPutRequest = (req, res, next) => {
       break;
     case dueDate !== undefined:
       // console.log(`Date from body is ${due_date}`);
-      const dueDate = new Date(dueDate);
+      //const dueDate = new Date(dueDate);
       if (isValid(new Date(`${dueDate}`))) {
         querySql = `UPDATE TODO SET due_date='${dueDate}'  WHERE id = ${todoId};`;
         resMsg = "Due Date Updated";
@@ -212,9 +212,9 @@ app.get("/agenda/", formatDateAndSendToReqObj, async (req, res) => {
 });
 
 // path for getting todo based on todo id
-app.get("/todos/:todoId", async (req, res) => {
+app.get("/todos/:todoId/", async (req, res) => {
   const { todoId } = req.params;
-  const gettingTodoBasedOnIdQuery = `SELECT * FROM todo WHERE id = ${todoId}`;
+  const gettingTodoBasedOnIdQuery = `SELECT * FROM todo WHERE id = ${todoId};`;
   try {
     const todoList = await db.get(gettingTodoBasedOnIdQuery);
     res.send(todoList);
@@ -228,8 +228,8 @@ app.get("/todos/:todoId", async (req, res) => {
 const verifyValuesInTodoPost = (req, res, next) => {
   const { priority, status, category, due_date } = req.body;
   console.log({ priority, status, category, due_date });
-  let isAnyError = false,
-    errMsg = "";
+  let isAnyError = false;
+  let errMsg = "";
   const statusPredefinedArr = ["TO DO", "IN PROGRESS", "DONE"];
   const priorityPredefinedArr = ["HIGH", "MEDIUM", "LOW"];
   const categoryPredefinedArr = ["HOME", "WORK", "LEARNING"];
@@ -266,10 +266,10 @@ const verifyValuesInTodoPost = (req, res, next) => {
   }
 };
 
-app.post("/todos", verifyValuesInTodoPost, async (req, res) => {
+app.post("/todos/", verifyValuesInTodoPost, async (req, res) => {
   const { id, todo, priority, status, category, due_date } = req.body;
   const addingTodoQuery = `INSERT INTO TODO(id , todo , priority , status , category , due_date) VALUES
-     (${id} , '${todo}' , '${priority}' , '${status}' , '${category}' , '${due_date}'  )`;
+     (${id} , '${todo}' , '${priority}' , '${status}' , '${category}' , '${due_date}'  ) ;`;
   try {
     console.log("before run");
     const postingTodoResponse = await db.run(addingTodoQuery);
@@ -283,7 +283,7 @@ app.post("/todos", verifyValuesInTodoPost, async (req, res) => {
 // till now api's are completed ################# --->>> sign for continuation
 
 app.put(
-  "/todos/:todoId",
+  "/todos/:todoId/",
   getQueryBasedOnBodyForPutRequest,
   async (req, res) => {
     const { updateQuery, resMsg } = req;
@@ -299,12 +299,12 @@ app.put(
 
 app.delete("/todos/:id/", async (req, res) => {
   const { id } = req.params;
-  const deletingTodoQuery = `DELETE FROM TODO WHERE id = ${id} `;
+  const deletingTodoQuery = `DELETE FROM TODO WHERE id = ${id} ;`;
   // deleting todo using run method
 
   try {
-    await db.run(deletingTodoQuery);
-    // console.log(deletingTodoPromise);
+    const deletingTodoPromise = await db.run(deletingTodoQuery);
+    console.log(deletingTodoPromise);
     res.send("Todo Deleted");
   } catch (e) {
     console.log(e.message);
