@@ -31,6 +31,29 @@ const returnWithRemoved20 = (word) => {
   return joinedWord;
 };
 
+const modifyKeysOfResponseList = (listOfObj) => {
+  const modifiedKeysOfResponse = listOfObj.map((eachObj) => ({
+    id: eachObj.id,
+    todo: eachObj.todo,
+    priority: eachObj.priority,
+    status: eachObj.status,
+    category: eachObj.category,
+    dueDate: eachObj.due_date,
+  }));
+  return modifiedKeysOfResponse;
+};
+
+const modifyKeysOfResponseOfSingleObj = (eachObj) => {
+  return {
+    id: eachObj.id,
+    todo: eachObj.todo,
+    priority: eachObj.priority,
+    status: eachObj.status,
+    category: eachObj.category,
+    dueDate: eachObj.due_date,
+  };
+};
+
 // (((((((((((  <<<<<<<<-----------   for getting todos based on different query parameters
 const filteringBasedOnQueryParams = (req, res, next) => {
   const {
@@ -129,9 +152,10 @@ app.get("/todos/", filteringBasedOnQueryParams, async (req, res) => {
   console.log(sqlQuery);
   try {
     const allToDosList = await db.all(sqlQuery);
-    console.log(allToDosList);
+    const modifiedResponseOfList = modifyKeysOfResponseList(allToDosList);
+    console.log(modifiedResponseOfList);
     console.log("reached to end");
-    res.send(allToDosList);
+    res.send(modifiedResponseOfList);
   } catch (e) {
     console.log(e.message);
   }
@@ -165,8 +189,21 @@ app.get("/agenda/", formatDateAndSendToReqObj, async (req, res) => {
   const gettingDataBasedOnDateQuery = `SELECT id , todo  , priority , status , category , due_date as dueDate FROM TODO WHERE due_date = '${date}' `;
   console.log(gettingDataBasedOnDateQuery);
   try {
-    const todoBasedOnDate = await db.all(gettingDataBasedOnDateQuery);
-    res.send(todoBasedOnDate);
+    const todoListBasedOnDate = await db.all(gettingDataBasedOnDateQuery);
+    console.log("&&&&&&&");
+    console.log(todoListBasedOnDate);
+    const modifiedkeysOfListOfObjFromRes = todoListBasedOnDate.map(
+      (eachObj) => ({
+        id: eachObj.id,
+        todo: eachObj.todo,
+        priority: eachObj.priority,
+        status: eachObj.status,
+        category: eachObj.category,
+        dueDate: eachObj.dueDate,
+      })
+    );
+    // console.log(modifiedkeysOfListOfObjFromRes);
+    res.send(modifiedkeysOfListOfObjFromRes);
   } catch (e) {
     console.log(e.message);
   }
@@ -181,9 +218,10 @@ app.get("/todos/:todoId/", async (req, res) => {
   const { todoId } = req.params;
   const gettingTodoBasedOnIdQuery = `SELECT * FROM todo WHERE id = ${todoId};`;
   try {
-    const todoList = await db.get(gettingTodoBasedOnIdQuery);
-    res.send(todoList);
-    console.log(todoList);
+    const todoItem = await db.get(gettingTodoBasedOnIdQuery);
+    const modifiedKeysResObj = modifyKeysOfResponseOfSingleObj(todoItem);
+    console.log(modifiedKeysResObj);
+    res.send(modifiedKeysResObj);
   } catch (e) {
     console.log(e.message);
   }
@@ -236,9 +274,9 @@ const verifyValuesInTodoPost = (req, res, next) => {
 };
 
 app.post("/todos/", verifyValuesInTodoPost, async (req, res) => {
-  const { id, todo, priority, status, category, due_date } = req.body;
-  const addingTodoQuery = `INSERT INTO TODO(id , todo , priority , status , category , due_date) VALUES
-     (${id} , '${todo}' , '${priority}' , '${status}' , '${category}' , '${due_date}'  ) ;`;
+  const { todo, priority, status, category, due_date } = req.body;
+  const addingTodoQuery = `INSERT INTO TODO(todo , priority , status , category , due_date) VALUES
+     ('${todo}' , '${priority}' , '${status}' , '${category}' , '${due_date}'  ) ;`;
   try {
     console.log("before run");
     const postingTodoResponse = await db.run(addingTodoQuery);
